@@ -200,65 +200,36 @@ router.post('/availability', auth, async (req, res) => {
 });
 
 // Get doctor's availability
-router.get('/availability/:doctorId', async (req, res) => {
+router.get('/availability/:doctorId', auth, async (req, res) => {
   try {
-    const { doctorId } = req.params;
+    const doctor = await User.findById(req.params.doctorId);
     
-    if (!doctorId) {
-      return res.status(400).json({ message: 'Doctor ID is required' });
-    }
-
-    // Validate if doctorId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
-      return res.status(400).json({ message: 'Invalid doctor ID format' });
-    }
-
-    const doctor = await User.findById(doctorId);
-    
-    if (!doctor) {
+    if (!doctor || doctor.role !== 'doctor') {
       return res.status(404).json({ message: 'Doctor not found' });
     }
 
-    if (doctor.role !== 'doctor') {
-      return res.status(400).json({ message: 'User is not a doctor' });
-    }
+    // Filter out past dates and booked slots
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
 
-    // Filter out expired slots and booked slots
-    const availableSlots = [];
-
-    if (!doctor.availability) {
-      doctor.availability = [];
-    }
-
-    doctor.availability.forEach(slot => {
-      // Only include slots that:
-      // 1. Haven't passed
-      // 2. Aren't booked
-      // 3. Aren't cancelled
-      if (!isTimeSlotPassed(slot.date, slot.endTime) && 
-          !slot.isBooked && 
-          slot.status !== 'cancelled_by_patient') {
-        availableSlots.push({
-          _id: slot._id,
-          date: slot.date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          doctorId: doctor._id
-        });
-      }
+    const availableSlots = doctor.availability.filter(slot => {
+      const slotDate = new Date(slot.date);
+      return slotDate >= currentDate && !slot.isBooked;
     });
 
     // Sort slots by date and time
     availableSlots.sort((a, b) => {
-      const dateA = new Date(a.date + 'T' + a.startTime);
-      const dateB = new Date(b.date + 'T' + b.startTime);
-      return dateA - dateB;
+      const dateCompare = new Date(a.date) - new Date(b.date);
+      if (dateCompare === 0) {
+        return a.startTime.localeCompare(b.startTime);
+      }
+      return dateCompare;
     });
 
     res.json(availableSlots);
   } catch (error) {
-    console.error('Error fetching availability:', error);
-    res.status(500).json({ message: error.message || 'Server error' });
+    console.error('Error fetching doctor availability:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

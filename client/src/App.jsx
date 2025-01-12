@@ -9,6 +9,7 @@ import Appointments from './pages/Appointments';
 import Chat from './pages/Chat';
 import Availability from './pages/Availability';
 import MedicalAssistant from './pages/MedicalAssistant';
+import ChatRoom from './pages/ChatRoom';
 
 function App() {
     return (
@@ -40,7 +41,7 @@ function App() {
                                 path="/chat/:appointmentId"
                                 element={
                                     <PrivateRoute>
-                                        <Chat />
+                                        <ChatRoom />
                                     </PrivateRoute>
                                 }
                             />

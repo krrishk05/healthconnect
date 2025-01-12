@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 module.exports = function(req, res, next) {
   // Get token from header
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
 
   // Check if no token
   if (!token) {
@@ -15,6 +15,7 @@ module.exports = function(req, res, next) {
     req.user = decoded.user;
     next();
   } catch (err) {
+    console.error('Token verification error:', err);
     res.status(401).json({ message: 'Token is not valid' });
   }
 }; 

@@ -11,32 +11,26 @@ router.post('/', auth, async (req, res) => {
     const { doctorId, date, startTime, endTime } = req.body;
     const patientId = req.user.id;
 
-    // Validate doctor exists and is a doctor
-    const doctor = await User.findOne({ _id: doctorId, role: 'doctor' });
-    if (!doctor) {
+    // Verify doctor exists
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
       return res.status(404).json({ message: 'Doctor not found' });
     }
 
-    // Find the matching availability slot
-    const availabilitySlot = doctor.availability.find(
+    // Check if slot is available
+    const availableSlot = doctor.availability.find(
       slot => 
         slot.date === date && 
         slot.startTime === startTime && 
-        slot.endTime === endTime &&
-        !slot.isBooked &&
-        slot.status === 'available'
+        slot.endTime === endTime && 
+        !slot.isBooked
     );
 
-    if (!availabilitySlot) {
-      return res.status(400).json({ message: 'Time slot is no longer available' });
+    if (!availableSlot) {
+      return res.status(400).json({ message: 'Time slot is not available' });
     }
 
-    // Mark the availability as booked
-    availabilitySlot.isBooked = true;
-    availabilitySlot.status = 'booked';
-    await doctor.save();
-
-    // Create the appointment
+    // Create appointment
     const appointment = new Appointment({
       doctor: doctorId,
       patient: patientId,
@@ -47,10 +41,15 @@ router.post('/', auth, async (req, res) => {
     });
 
     await appointment.save();
-    res.json(appointment);
+
+    // Update doctor's availability
+    availableSlot.isBooked = true;
+    await doctor.save();
+
+    res.status(201).json(appointment);
   } catch (error) {
-    console.error('Error creating appointment:', error);
-    res.status(500).json({ message: error.message || 'Server error' });
+    console.error('Error booking appointment:', error);
+    res.status(500).json({ message: 'Error booking appointment' });
   }
 });
 
@@ -289,6 +288,40 @@ router.post('/', auth, async (req, res) => {
     console.error('Error creating appointment:', error);
     res.status(500).json({ message: error.message });
   }
+});
+
+// Get appointment by ID
+router.get('/:appointmentId', auth, async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const userId = req.user.id.toString();
+
+        console.log(`User ${userId} requesting appointment ${appointmentId}`);
+
+        // Find the appointment and populate doctor and patient details
+        const appointment = await Appointment.findById(appointmentId)
+            .populate('doctor', 'name specialization')
+            .populate('patient', 'name');
+
+        if (!appointment) {
+            console.log(`Appointment ${appointmentId} not found`);
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        const patientId = appointment.patient._id.toString();
+        const doctorId = appointment.doctor._id.toString();
+
+        // Check if the requesting user is either the patient or the doctor
+        if (userId !== patientId && userId !== doctorId) {
+            console.log(`User ${userId} is not authorized for appointment ${appointmentId}`);
+            return res.status(403).json({ message: 'Not authorized to view this appointment' });
+        }
+
+        res.json(appointment);
+    } catch (error) {
+        console.error(`Error fetching appointment ${req.params.appointmentId}:`, error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
 module.exports = router; 

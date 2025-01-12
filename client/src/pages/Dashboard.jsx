@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
@@ -17,6 +17,7 @@ const Dashboard = () => {
     cancelled: 0
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +80,16 @@ const Dashboard = () => {
   if (user.role === 'doctor') {
     return (
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Welcome Message */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome to HealthConnect, Dr. {user.name}
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Manage your appointments and patient interactions
+          </p>
+        </div>
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-6">
           <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -121,8 +132,18 @@ const Dashboard = () => {
                           Patient: {appointment.patient.name}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Time: {appointment.startTime} - {appointment.endTime}
+                          Time: {convertTo12Hour(appointment.startTime)} - {convertTo12Hour(appointment.endTime)}
                         </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        {appointment.status === 'scheduled' && (
+                          <button
+                            onClick={() => navigate(`/chat/${appointment._id}`)}
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            Chat
+                          </button>
+                        )}
                       </div>
                     </div>
                   </li>
@@ -130,6 +151,46 @@ const Dashboard = () => {
               </ul>
             ) : (
               <p className="text-gray-500">No appointments scheduled for today</p>
+            )}
+          </div>
+        </div>
+
+        {/* Upcoming Appointments */}
+        <div className="bg-white shadow sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Upcoming Appointments</h2>
+            {upcomingAppointments.length > 0 ? (
+              <ul className="divide-y divide-gray-200">
+                {upcomingAppointments.map((appointment) => (
+                  <li key={appointment._id} className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Patient: {appointment.patient.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Date: {format(new Date(appointment.date), 'PPP')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Time: {convertTo12Hour(appointment.startTime)} - {convertTo12Hour(appointment.endTime)}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        {appointment.status === 'scheduled' && (
+                          <button
+                            onClick={() => navigate(`/chat/${appointment._id}`)}
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            Chat
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">No upcoming appointments</p>
             )}
           </div>
         </div>
@@ -146,7 +207,7 @@ const Dashboard = () => {
                 Manage Availability
               </Link>
               <Link
-                to={`/appointments?doctor=${user._id}`}
+                to={`/appointments`}
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
               >
                 View All Appointments
@@ -162,6 +223,16 @@ const Dashboard = () => {
   if (user.role === 'patient') {
     return (
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Welcome Message */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome to HealthConnect, {user.name}
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Book appointments and manage your healthcare journey
+          </p>
+        </div>
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-6">
           <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -203,7 +274,7 @@ const Dashboard = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            Dr. {appointment.doctor.name}
+                            Doctor: Dr. {appointment.doctor.name}
                           </p>
                           <p className="text-sm text-gray-500">
                             Date: {format(new Date(appointment.date), 'PPP')}
@@ -211,13 +282,20 @@ const Dashboard = () => {
                           <p className="text-sm text-gray-500">
                             Time: {convertTo12Hour(appointment.startTime)} - {convertTo12Hour(appointment.endTime)}
                           </p>
+                          <p className="text-sm text-gray-500">
+                            Status: {appointment.status}
+                          </p>
                         </div>
-                        <button
-                          onClick={() => navigate(`/chat/${appointment._id}`)}
-                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                        >
-                          Chat
-                        </button>
+                        <div className="flex space-x-2">
+                          {appointment.status === 'scheduled' && (
+                            <button
+                              onClick={() => navigate(`/chat/${appointment._id}`)}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              Chat
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </li>
                   ))}

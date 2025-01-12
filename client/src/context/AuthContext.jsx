@@ -26,53 +26,40 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Set up axios default header for token
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['x-auth-token'] = token;
+    }
+  }, []);
+
   useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        try {
-          const res = await axios.get(`${API_URL}/api/auth/me`);
-          setUser(res.data);
-        } catch (error) {
-          console.error('Error loading user:', error);
-          localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
-        }
+      if (!token) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        const res = await axios.get(`${API_URL}/api/auth/me`, {
+          headers: {
+            'x-auth-token': token
+          }
+        });
+        setUser(res.data);
+      } catch (error) {
+        console.error('Error loading user:', error);
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['x-auth-token'];
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadUser();
   }, []);
-
-  const register = async (formData) => {
-    try {
-      console.log('Attempting registration with:', formData);
-      const response = await axios.post(`${API_URL}/api/auth/register`, formData);
-      console.log('Registration response:', response.data);
-      
-      const { token, user: userData } = response.data;
-      if (!token || !userData) {
-        throw new Error('Invalid response from server');
-      }
-      
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(userData);
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      console.error('Error response:', error.response?.data);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else if (error.message) {
-        throw new Error(error.message);
-      } else {
-        throw new Error('Registration failed - please try again');
-      }
-    }
-  };
 
   const login = async (email, password) => {
     try {
@@ -82,7 +69,7 @@ export function AuthProvider({ children }) {
       });
       const { token, user: userData } = response.data;
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      axios.defaults.headers.common['x-auth-token'] = token;
       setUser(userData);
       return response.data;
     } catch (error) {
@@ -90,9 +77,22 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const register = async (formData) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/register`, formData);
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['x-auth-token'] = token;
+      setUser(userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || 'Registration failed';
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+    delete axios.defaults.headers.common['x-auth-token'];
     setUser(null);
   };
 

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const availabilitySchema = new mongoose.Schema({
+const availabilitySlotSchema = new mongoose.Schema({
     date: {
         type: String,
         required: true
@@ -16,11 +16,6 @@ const availabilitySchema = new mongoose.Schema({
     isBooked: {
         type: Boolean,
         default: false
-    },
-    status: {
-        type: String,
-        enum: ['available', 'booked', 'cancelled_by_patient', 'cancelled_by_doctor'],
-        default: 'available'
     }
 });
 
@@ -47,7 +42,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false
     },
-    availability: [availabilitySchema]
+    availability: [availabilitySlotSchema]
 }, {
     timestamps: true
 });

@@ -68,63 +68,65 @@ const MedicalAssistant = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="bg-white shadow sm:rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Medical Assistant
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Chat with our AI medical assistant for general health information. Remember that this is not a replacement for professional medical advice.
-          </p>
-          
-          <div className="h-96 overflow-y-auto mb-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`mb-4 ${
-                  message.role === 'user' ? 'text-right' : 'text-left'
-                }`}
-              >
-                <div
-                  className={`inline-block px-4 py-2 rounded-lg ${
-                    message.role === 'user'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
+    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-semibold text-gray-900">Medical Assistant</h1>
+                <button
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  {message.content}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="flex space-x-4">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={loading}
-                className="flex-1 min-w-0 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Type your message..."
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                  loading
-                    ? 'bg-indigo-400'
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-              >
-                {loading ? 'Sending...' : 'Send'}
-              </button>
+                    Send Chat Summary to Doctor
+                </button>
             </div>
-          </form>
+
+            <div className="bg-white shadow-sm rounded-lg">
+                <div className="h-96 overflow-y-auto p-4 space-y-4">
+                    {messages.map((message, index) => (
+                        <div
+                            key={index}
+                            className={`mb-4 ${
+                                message.role === 'user' ? 'text-right' : 'text-left'
+                            }`}
+                        >
+                            <div
+                                className={`inline-block px-4 py-2 rounded-lg ${
+                                    message.role === 'user'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-gray-100 text-gray-900'
+                                }`}
+                            >
+                                {message.content}
+                            </div>
+                        </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                <div className="border-t border-gray-200 p-4">
+                    <form onSubmit={handleSubmit} className="flex space-x-4">
+                        <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            disabled={loading}
+                            className="flex-1 min-w-0 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="Type your message..."
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                                loading
+                                    ? 'bg-indigo-400'
+                                    : 'bg-indigo-600 hover:bg-indigo-700'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                        >
+                            {loading ? 'Sending...' : 'Send'}
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
   );
 };

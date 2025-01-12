@@ -16,9 +16,13 @@ const Appointments = () => {
     const [availableSlots, setAvailableSlots] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [isBooking, setIsBooking] = useState(false);
 
     const handleBooking = async (slot) => {
         try {
+            setIsBooking(true);
+            setError('');
+            
             await axios.post(
                 `${import.meta.env.VITE_API_URL}/api/appointments`,
                 {
@@ -34,15 +38,20 @@ const Appointments = () => {
                     }
                 }
             );
+
             setSuccess('Appointment booked successfully!');
-            // Refresh the available slots
-            fetchDoctorAvailability();
+            
+            // Refresh available slots
+            await fetchDoctorAvailability();
+            
             // Navigate back to appointments list after short delay
             setTimeout(() => {
                 navigate('/appointments');
             }, 2000);
         } catch (err) {
             setError(err.response?.data?.message || 'Error booking appointment');
+        } finally {
+            setIsBooking(false);
         }
     };
 
@@ -70,6 +79,54 @@ const Appointments = () => {
         setSuccess('');
         // Use navigate with replace to avoid building up history stack
         navigate('/appointments', { replace: true });
+    };
+
+    const renderDoctorAvailability = () => {
+        if (!doctorId || !doctors.length) return null;
+        const doctor = doctors[0]; // Since we're viewing a specific doctor
+
+        return (
+            <div className="bg-white shadow sm:rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                        Available Time Slots for Dr. {doctor.name}
+                    </h2>
+                    {doctor.specialization && (
+                        <p className="text-sm text-gray-600 mb-4">
+                            Specialization: {doctor.specialization}
+                        </p>
+                    )}
+
+                    {availableSlots.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {availableSlots.map((slot, index) => (
+                                <div
+                                    key={index}
+                                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                                >
+                                    <p className="text-sm font-medium text-gray-900">
+                                        {format(new Date(slot.date), 'PPP')}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                        {convertTo12Hour(slot.startTime)} - {convertTo12Hour(slot.endTime)}
+                                    </p>
+                                    <button
+                                        onClick={() => handleBooking(slot)}
+                                        className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                    >
+                                        Book Appointment
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-center py-4">
+                            No available time slots for this doctor
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     useEffect(() => {
@@ -185,46 +242,9 @@ const Appointments = () => {
                     </div>
                 )}
 
-                {user.role === 'doctor' ? (
-                    // Doctor's appointments view
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                        {appointments.length > 0 ? (
-                            <ul className="divide-y divide-gray-200">
-                                {appointments.map((appointment) => (
-                                    <li key={appointment._id} className="px-4 py-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    Patient: {appointment.patient.name}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Date: {format(new Date(appointment.date), 'PPP')}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Time: {convertTo12Hour(appointment.startTime)} - {convertTo12Hour(appointment.endTime)}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Status: {appointment.status}
-                                                </p>
-                                            </div>
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => navigate(`/chat/${appointment._id}`)}
-                                                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                                                >
-                                                    Chat
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="px-4 py-5 text-center text-gray-500">
-                                No appointments scheduled
-                            </div>
-                        )}
-                    </div>
+                {doctorId ? (
+                    // Show available slots for specific doctor
+                    renderDoctorAvailability()
                 ) : (
                     // Show existing appointments and doctor list
                     <div>
@@ -272,47 +292,49 @@ const Appointments = () => {
                         </div>
 
                         {/* Available Doctors Section */}
-                        <div className="mt-4">
-                            <h2 className="text-lg font-medium text-gray-900 mb-4">Available Doctors</h2>
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {doctors.map((doctor) => (
-                                    <div key={doctor._id} className="bg-white overflow-hidden shadow rounded-lg">
-                                        <div className="px-4 py-5 sm:p-6">
-                                            <h3 className="text-lg font-medium text-gray-900">Dr. {doctor.name}</h3>
-                                            {doctor.specialization && (
-                                                <p className="mt-1 text-sm text-gray-500">{doctor.specialization}</p>
-                                            )}
-                                            <p className="mt-1 text-sm text-gray-500">{doctor.email}</p>
-
-                                            {/* Show available slots count */}
-                                            <p className="mt-2 text-sm text-gray-500">
-                                                {doctor.availableSlots.length > 0
-                                                    ? `${doctor.availableSlots.length} time slot${doctor.availableSlots.length === 1 ? '' : 's'} available`
-                                                    : 'No available time slots'}
-                                            </p>
-
-                                            <div className="mt-4">
-                                                {doctor.availableSlots.length > 0 ? (
-                                                    <button
-                                                        onClick={() => navigate(`/appointments?doctor=${doctor._id}`)}
-                                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                                                    >
-                                                        View Available Times
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        disabled
-                                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-400 cursor-not-allowed"
-                                                    >
-                                                        No Availability
-                                                    </button>
+                        {user.role === 'patient' && (
+                            <div className="mt-4">
+                                <h2 className="text-lg font-medium text-gray-900 mb-4">Available Doctors</h2>
+                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                    {doctors.map((doctor) => (
+                                        <div key={doctor._id} className="bg-white overflow-hidden shadow rounded-lg">
+                                            <div className="px-4 py-5 sm:p-6">
+                                                <h3 className="text-lg font-medium text-gray-900">Dr. {doctor.name}</h3>
+                                                {doctor.specialization && (
+                                                    <p className="mt-1 text-sm text-gray-500">{doctor.specialization}</p>
                                                 )}
+                                                <p className="mt-1 text-sm text-gray-500">{doctor.email}</p>
+
+                                                {/* Show available slots count */}
+                                                <p className="mt-2 text-sm text-gray-500">
+                                                    {doctor.availableSlots.length > 0
+                                                        ? `${doctor.availableSlots.length} time slot${doctor.availableSlots.length === 1 ? '' : 's'} available`
+                                                        : 'No available time slots'}
+                                                </p>
+
+                                                <div className="mt-4">
+                                                    {doctor.availableSlots.length > 0 ? (
+                                                        <button
+                                                            onClick={() => navigate(`/appointments?doctor=${doctor._id}`)}
+                                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                                                        >
+                                                            View Available Times
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            disabled
+                                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-400 cursor-not-allowed"
+                                                        >
+                                                            No Availability
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
             </div>
